@@ -29,18 +29,28 @@ import javafx.scene.layout.GridPane;
 
 
 public class Main extends Application{
+	private static final int	sceneWidth			= 1000;
+	private static final int	sceneHeight			= 700;
 	
-	private static BorderPane 	root = new BorderPane();
-	private static Stage 		pStage;
-	private static WorkingImage activeImage;
+	private static final double	menuInitialOpacity 	= 0.2;
+	private static final double	menuMinOpacity 		= 0.0;
+	private static final double	menuMaxOpacity 		= 0.9;
+	private static final int	menuElementGaps		= 12;
+	private static final Insets menuPadding			= new Insets(20,20,20,20);
 	
-	private static Label topBar;
-	private static Label statusBar;
+	
+	
+	private static BorderPane 		rootPane;
+	private static Stage 			stage;
+	private static WorkingImage 	activeImage;
+	
+	private static Label 			topBar;
+	private static Label 			statusBar;
 		
 	
 	
 	/**
-	 * Does nothing but starting the GUI.
+	 * Does nothing but start the GUI.
 	 */
 	public static void main(String[] args) {
 		launch(args);
@@ -53,26 +63,28 @@ public class Main extends Application{
 	 */
 	@Override
 	public void start(Stage primaryStage) {
-		root.setId("root");
-		pStage = primaryStage;
+		rootPane = new BorderPane();
+		rootPane.setId("root");
+		
+		stage = primaryStage;
 		
 		primaryStage.setTitle("Watermarker Beta");
 		
-		topBar = new Label("");
-		statusBar = new Label("");
+		topBar 		= new Label("");
+		statusBar 	= new Label("");
 		
 		
 
 
 		
 		// Menü und Info-Leisten den entsprechenden Bereichen der BorderPane zuordnen.
-		root.setRight(makeMenu());
-		root.setTop(topBar);
-		root.setBottom(statusBar);
+		rootPane.setRight(makeMenu());
+		rootPane.setTop(topBar);
+		rootPane.setBottom(statusBar);
 
 		
 		// Neue Scene erzeugen, Stylesheet laden und der Stage zuweisen.
-		Scene scene = new Scene(root,1000,700);
+		Scene scene = new Scene(rootPane,sceneWidth,sceneHeight);
 		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 		primaryStage.setScene(scene);
 		primaryStage.setResizable(false);
@@ -80,13 +92,13 @@ public class Main extends Application{
 		
 		// Programm soll nicht ohne Rückfrage beendet werden, falls noch eine ungespeicherte Datei offen ist.
 		primaryStage.setOnCloseRequest(e->{
-			if (activeImage == null || activeImage.isSaved())		
+			if (activeImage == null || activeImage.getStatusImageSaved())		
 				System.exit(0);
 			else {
 				Alert unsaved = new Alert(AlertType.CONFIRMATION);
-				unsaved.setTitle("Änderungen nicht gespeicht");
-				unsaved.setHeaderText("Die Änderungen an der aktuellen Datei wurden nicht gespeichert.");
-				unsaved.setContentText("Wollen Sie das Programm trotzdem Beenden?");
+				unsaved.setTitle(Messages.getString("Main.unsavedChangesTitle"));
+				unsaved.setHeaderText(Messages.getString("Main.unsavedChangesHeader"));
+				unsaved.setContentText(Messages.getString("Main.closeAnyway"));
 				Optional<ButtonType> result = unsaved.showAndWait();
 				if (result.get() == ButtonType.OK)
 					System.exit(0);
@@ -107,8 +119,8 @@ public class Main extends Application{
 	 * @param file		The image-file.
 	 */
 	private static void showLoadedImage(File file){
-		Image img = null;
-		String source = null;
+		Image img 		= null;
+		String source 	= null;
 		
 		try {
 			source = file.toURI().toURL().toString();
@@ -119,11 +131,11 @@ public class Main extends Application{
 		
 		img = new Image(source);
 		
-		if (img.getHeight() > root.getHeight()   ||    img.getWidth() > root.getWidth())
-			img =  new Image(source,root.getWidth(), root.getHeight(),true, true);
+		if (img.getHeight() > rootPane.getHeight()   ||    img.getWidth() > rootPane.getWidth())
+			img =  new Image(source,rootPane.getWidth(), rootPane.getHeight(),true, true);
 		
 		
-		root.setBackground(new Background(new BackgroundImage	(img, 
+		rootPane.setBackground(new Background(new BackgroundImage	(img, 
 																BackgroundRepeat.NO_REPEAT, 
 																BackgroundRepeat.NO_REPEAT, 
 																BackgroundPosition.CENTER, 
@@ -142,38 +154,38 @@ public class Main extends Application{
 		// Erzeugen der Menüleiste
 		GridPane menuPane = new GridPane();
 		menuPane.setId("menuPane");
-		menuPane.setOpacity(0.2);
-		menuPane.setVgap(12);
-		menuPane.setHgap(12);
-		menuPane.setPadding(new Insets(20,20,20,20));
+		menuPane.setOpacity(menuInitialOpacity);
+		menuPane.setVgap(menuElementGaps);
+		menuPane.setHgap(menuElementGaps);
+		menuPane.setPadding(menuPadding);
 		menuPane.setAlignment(Pos.CENTER);
 				
 
 		// Ein- und Ausblendeffekte der Menüleiste
 		menuPane.setOnMouseEntered(	e-> {
 			FadeTransition fadeIn = new FadeTransition(Duration.millis(100), menuPane);
-			fadeIn.setFromValue(0.0);
-			fadeIn.setToValue(0.9);
+			fadeIn.setFromValue(menuMinOpacity);
+			fadeIn.setToValue(menuMaxOpacity);
 			fadeIn.play();
 		});
 		
 		menuPane.setOnMouseExited( 	e-> {
 			FadeTransition fadeOut = new FadeTransition(Duration.millis(200), menuPane);
-			fadeOut.setFromValue(0.9);
-			fadeOut.setToValue(0.0);
+			fadeOut.setFromValue(menuMaxOpacity);
+			fadeOut.setToValue(menuMinOpacity);
 			fadeOut.play();
 		});
 		
 		
 		
 		// Manüeinträge werden durch Labels realisert.
-		Label lblOpen 	= new Label("Open");
-		Label lblSave 	= new Label("Save");
-		Label lblSaveAs	= new Label("Save As");
-		Label lblRead 	= new Label("Read");
-		Label lblWrite 	= new Label("Write");
-		Label lblErase 	= new Label("Delete");
-		Label lblClose	= new Label("Exit");
+		Label lblOpen 	= new Label(Messages.getString("Main.MenuOpen"));
+		Label lblSave 	= new Label(Messages.getString("Main.MenuSave"));
+		Label lblSaveAs	= new Label(Messages.getString("Main.MenuSaveAs"));
+		Label lblRead 	= new Label(Messages.getString("Main.MenuRead"));
+		Label lblWrite 	= new Label(Messages.getString("Main.MenuWrite"));
+		Label lblErase 	= new Label(Messages.getString("Main.MenuDelete"));
+		Label lblClose	= new Label(Messages.getString("Main.MenuExit"));
 
 		lblOpen.setId	("menuLabel");
 		lblSave.setId	("menuLabel");
@@ -201,19 +213,20 @@ public class Main extends Application{
 			FileChooser chooser = new FileChooser();
 			chooser.getExtensionFilters().add(new ExtensionFilter("PNG-Files", "*.png"));
 			File file = null;;
+			
 			Alert unsaved = new Alert(AlertType.CONFIRMATION);
-			unsaved.setTitle("Änderungen nicht gespeicht");
-			unsaved.setHeaderText("Die Änderungen an der aktuellen Datei wurden nicht gespeichert.");
-			unsaved.setContentText("Wollen Sie die Änderungen verwerfen?");
+			unsaved.setTitle(Messages.getString("Main.unsavedChangesTitle")); 
+			unsaved.setHeaderText(Messages.getString("Main.unsavedChangesHeader")); 
+			unsaved.setContentText(Messages.getString("Main.openAnyway")); 
 
 			// Neue Datei soll nur geöffnet werden, wenn (1) noch keine Datei offen ist, (2) die geöffnete Datei so 
 			// auch gespeichert wurde, (3) der Benutzer bestätigt das die Änderungen verworfen werden sollen.
-			if (activeImage == null || activeImage.isSaved() || unsaved.showAndWait().get() == ButtonType.OK)		
-				file = chooser.showOpenDialog(pStage);
+			if (activeImage == null || activeImage.getStatusImageSaved() || unsaved.showAndWait().get() == ButtonType.OK)		
+				file = chooser.showOpenDialog(stage);
 				if (file != null){
 					activeImage = new WorkingImage(file);
-					if (activeImage.isLoaded()){
-						if (activeImage.getEmbeddedWatermark().equals("")){
+					if (activeImage.getStatusImageLoaded()){
+						if (activeImage.getEmbeddedWatermark().equals("")){ 
 							lblWrite.setDisable	(false);
 							lblRead.setDisable	(true);
 							lblErase.setDisable	(true);
@@ -224,10 +237,10 @@ public class Main extends Application{
 						}
 						lblSave.setDisable		(true);
 						lblSaveAs.setDisable	(false);
-						pStage.setTitle(file.toString());
+						stage.setTitle(file.toString());
 						showLoadedImage(file);
 					} else {
-						message("FEHLER", "Fehler beim Öffnen der Datei");
+						showInformationDialog(Messages.getString("Main.error"), Messages.getString("Main.fileOpenError"));
 					}
 				}
 			else {
@@ -243,10 +256,10 @@ public class Main extends Application{
 		lblSave.setOnMouseExited(		e-> {		lblSave.setId("menuLabel");				});
 		lblSave.setOnMouseClicked(		e-> {
 			if(activeImage.saveImageFile()){
-				statusBar.setText("Datei gespeichert.");
+				statusBar.setText(Messages.getString("Main.fileSaved"));
 				lblSave.setDisable(true);
 			} else
-				message("FEHLER", "Datei konnte nicht gespeichert werden");
+				showInformationDialog(Messages.getString("Main.error"), Messages.getString("Main.errorFileNotSaved"));
 		});
 		
 		
@@ -256,15 +269,15 @@ public class Main extends Application{
 		lblSaveAs.setOnMouseClicked(	e-> {
 			FileChooser chooser = new FileChooser();
 			chooser.getExtensionFilters().add(new ExtensionFilter("PNG-Files", "*.png"));
-			File file = chooser.showSaveDialog(pStage);
+			File file = chooser.showSaveDialog(stage);
 			if (file != null){
 				String preCheck = file.getAbsoluteFile().toString();
 				if (!preCheck.toLowerCase().endsWith(".png"))
 						file = new File(preCheck + ".png");
 				if(activeImage.saveImageFileAs(file)){
 					activeImage = new WorkingImage(file);
-					pStage.setTitle(file.toString());
-					statusBar.setText("Datei gespeichert");
+					stage.setTitle(file.toString());
+					statusBar.setText(Messages.getString("Main.fileSaved"));
 					lblSave.setDisable(true);
 				}
 			}
@@ -275,7 +288,7 @@ public class Main extends Application{
 		lblRead.setOnMouseEntered(		e-> {	lblRead.setId("menuLabelMouseOver");		});
 		lblRead.setOnMouseExited(		e-> {	lblRead.setId("menuLabel");					});
 		lblRead.setOnMouseClicked(		e-> {
-			message("Ausgelenes Wasserzeichen", activeImage.getEmbeddedWatermark());
+			showInformationDialog(Messages.getString("Main.readWatermark"), activeImage.getEmbeddedWatermark());
 		});
 				
 		
@@ -283,9 +296,9 @@ public class Main extends Application{
 		lblWrite.setOnMouseEntered(		e-> {	lblWrite.setId("menuLabelMouseOver");		});
 		lblWrite.setOnMouseExited(		e-> {	lblWrite.setId("menuLabel");				});
 		lblWrite.setOnMouseClicked(		e-> {
-			TextInputDialog input = new TextInputDialog("Wasserzeichen");
-			input.setTitle("Eingabe");
-			input.setHeaderText("Bitte Wasserzeichen eingeben.");
+			TextInputDialog input = new TextInputDialog(Messages.getString("Main.watermark"));
+			input.setTitle(Messages.getString("Main.watermarkInputTitle"));
+			input.setHeaderText(Messages.getString("Main.watermarkInputHeader"));
 			Optional<String> payload = input.showAndWait();
 			payload.ifPresent(watermark -> {  
 				if(activeImage.writeWatermark(watermark)){
@@ -295,13 +308,18 @@ public class Main extends Application{
 					lblErase.setDisable	(false);
 					lblWrite.setDisable	(true);
 					
-					statusBar.setText("Wasserzeichen gesetzt mit " + activeImage.getRedundancy() + " x Redundanz");
-					pStage.setTitle(activeImage.getImageFile().toString() + " - >>> unsaved <<<");
+					statusBar.setText(	Messages.getString("Main.watermarkSet") + 
+										activeImage.getRedundancy() + 
+										Messages.getString("Main.watermarkSetRedundancy"));
+					
+					stage.setTitle(	activeImage.getImageFile().toString() + 
+										Messages.getString("Main.statusUnsaved"));
+					
 					showLoadedImage(activeImage.getImageFile());;
 				} else {
-					message ("Fehler", "Wasserzeichen konnte nicht geschrieben werden");
+					showInformationDialog (Messages.getString("Main.error"), Messages.getString("Main.errorWatermarkNotSet"));
 				}
-				});
+			});
 		});
 				
 		
@@ -309,15 +327,15 @@ public class Main extends Application{
 		lblErase.setOnMouseEntered(		e-> {	lblErase.setId("menuLabelMouseOver");		});
 		lblErase.setOnMouseExited(		e-> {	lblErase.setId("menuLabel");				});
 		lblErase.setOnMouseClicked(		e-> {
-			if(activeImage.removeEmbeddedWatermark()){
+			if(activeImage.removeWatermark()){
 				lblSave.setDisable		(false);
 				lblSaveAs.setDisable	(false);
 				lblWrite.setDisable		(false);
 				lblRead.setDisable		(true);
 				lblErase.setDisable		(true);
 				
-				pStage.setTitle(activeImage.getImageFile().toString() + " - >>> unsaved <<<");
-				statusBar.setText("Wasserzeichen entfernt");
+				stage.setTitle(activeImage.getImageFile().toString() + Messages.getString("Main.statusUnsaved"));
+				statusBar.setText(Messages.getString("Main.watermarkRemoved"));
 				showLoadedImage(activeImage.getImageFile());;
 			}
 		});
@@ -327,13 +345,13 @@ public class Main extends Application{
 		lblClose.setOnMouseEntered(		e-> {	lblClose.setId("menuLabelMouseOver");		});
 		lblClose.setOnMouseExited(		e-> {	lblClose.setId("menuLabel");				});
 		lblClose.setOnMouseClicked(		e-> {
-			if (activeImage == null || activeImage.isSaved())		
+			if (activeImage == null || activeImage.getStatusImageSaved())		
 				System.exit(0);
 			else {
 				Alert unsaved = new Alert(AlertType.CONFIRMATION);
-				unsaved.setTitle("Änderungen nicht gespeicht");
-				unsaved.setHeaderText("Die Änderungen an der aktuellen Datei wurden nicht gespeichert.");
-				unsaved.setContentText("Wollen Sie das Programm trotzdem Beenden?");
+				unsaved.setTitle(Messages.getString("Main.unsavedChangesTitle"));
+				unsaved.setHeaderText(Messages.getString("Main.unsavedChangesHeader"));
+				unsaved.setContentText(Messages.getString("Main.closeAnyway"));
 				Optional<ButtonType> result = unsaved.showAndWait();
 				if (result.get() == ButtonType.OK)
 					System.exit(0);
@@ -351,7 +369,7 @@ public class Main extends Application{
 		menuPane.add(lblRead, 	0, 5);
 		menuPane.add(lblWrite, 	0, 6);
 		menuPane.add(lblErase, 	0, 7);
-		menuPane.add(lblClose, 0, 12);
+		menuPane.add(lblClose,  0, 12);
 
 		return menuPane;
 	}
@@ -363,7 +381,7 @@ public class Main extends Application{
 	 * @param head		Message header-text.
 	 * @param content	Message content-text.
 	 */
-	private static void message(String head, String content){
+	private static void showInformationDialog(String head, String content){
 		Alert message = new Alert(AlertType.INFORMATION);
 		message.setHeaderText(head);
 		message.setContentText(content);
