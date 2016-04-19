@@ -28,15 +28,22 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 
 
+/**
+ * GUI of watermarker.
+ * 
+ * @author Markus Grosshaeuser
+ *
+ */
+
 public class Main extends Application{
-	private static final int	sceneWidth			= 1000;
-	private static final int	sceneHeight			= 700;
+	private static final int	SCENE_WIDTH				= 1000;
+	private static final int	SCENE_HEIGHT			= 700;
 	
-	private static final double	menuInitialOpacity 	= 0.2;
-	private static final double	menuMinOpacity 		= 0.0;
-	private static final double	menuMaxOpacity 		= 0.9;
-	private static final int	menuElementGaps		= 12;
-	private static final Insets menuPadding			= new Insets(20,20,20,20);
+	private static final double	MENU_INITIAL_OPACITY 	= 0.2;
+	private static final double	MENU_MIN_OPACITY 		= 0.0;
+	private static final double	MENU_MAX_OPACITY 		= 0.9;
+	private static final int	MENU_ELEMENT_GAPS		= 12;
+	private static final Insets MENU_PADDING			= new Insets(20,20,20,20);
 	
 	
 	
@@ -84,7 +91,7 @@ public class Main extends Application{
 
 		
 		// Neue Scene erzeugen, Stylesheet laden und der Stage zuweisen.
-		Scene scene = new Scene(rootPane,sceneWidth,sceneHeight);
+		Scene scene = new Scene(rootPane,SCENE_WIDTH,SCENE_HEIGHT);
 		scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 		primaryStage.setScene(scene);
 		primaryStage.setResizable(false);
@@ -154,25 +161,25 @@ public class Main extends Application{
 		// Erzeugen der Menüleiste
 		GridPane menuPane = new GridPane();
 		menuPane.setId("menuPane");
-		menuPane.setOpacity(menuInitialOpacity);
-		menuPane.setVgap(menuElementGaps);
-		menuPane.setHgap(menuElementGaps);
-		menuPane.setPadding(menuPadding);
+		menuPane.setOpacity(MENU_INITIAL_OPACITY);
+		menuPane.setVgap(MENU_ELEMENT_GAPS);
+		menuPane.setHgap(MENU_ELEMENT_GAPS);
+		menuPane.setPadding(MENU_PADDING);
 		menuPane.setAlignment(Pos.CENTER);
 				
 
 		// Ein- und Ausblendeffekte der Menüleiste
 		menuPane.setOnMouseEntered(	e-> {
 			FadeTransition fadeIn = new FadeTransition(Duration.millis(100), menuPane);
-			fadeIn.setFromValue(menuMinOpacity);
-			fadeIn.setToValue(menuMaxOpacity);
+			fadeIn.setFromValue(MENU_MIN_OPACITY);
+			fadeIn.setToValue(MENU_MAX_OPACITY);
 			fadeIn.play();
 		});
 		
 		menuPane.setOnMouseExited( 	e-> {
 			FadeTransition fadeOut = new FadeTransition(Duration.millis(200), menuPane);
-			fadeOut.setFromValue(menuMaxOpacity);
-			fadeOut.setToValue(menuMinOpacity);
+			fadeOut.setFromValue(MENU_MAX_OPACITY);
+			fadeOut.setToValue(MENU_MIN_OPACITY);
 			fadeOut.play();
 		});
 		
@@ -256,6 +263,7 @@ public class Main extends Application{
 		lblSave.setOnMouseExited(		e-> {		lblSave.setId("menuLabel");				});
 		lblSave.setOnMouseClicked(		e-> {
 			if(activeImage.saveImageFile()){
+				stage.setTitle(activeImage.getImageFile().toString());
 				statusBar.setText(Messages.getString("Main.fileSaved"));
 				lblSave.setDisable(true);
 			} else
@@ -315,7 +323,7 @@ public class Main extends Application{
 					stage.setTitle(	activeImage.getImageFile().toString() + 
 										Messages.getString("Main.statusUnsaved"));
 					
-					showLoadedImage(activeImage.getImageFile());;
+					showLoadedImage(activeImage.getImageFile());
 				} else {
 					showInformationDialog (Messages.getString("Main.error"), Messages.getString("Main.errorWatermarkNotSet"));
 				}

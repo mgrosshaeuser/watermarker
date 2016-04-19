@@ -18,20 +18,20 @@ import javax.imageio.ImageIO;
  */
 public class WorkingImage {
 
-	private final String	watermarkIndicator	  		= "start";
+	private static final String	WATERMARK_INDICATOR	  			= "start";
 	
-	private final int 		stepSize    				=     1;
-	private final int		initialExtendesStepSize 	=	  1;
-	private final int		initialWatermarkMaxLength 	= 	 30;
+	private static final int 	STEPSIZE    					=     1;
+	private static final int	INITIAL_EXTENDED_STEPSIZE 		=	  1;
+	private static final int	INITIAL_WATERMARK_MAX_LENGTH 	= 	 30;
 	
-	private final int		lengthOfBinaryUnit			= 	  8;
-	private final int		baseOfBinaryUnit			=	  2;
-	private final int		maxExponentInBinaryUnit		=	  7;
+	private static final int	LENGTH_OF_BINARY_UNIT			= 	  8;
+	private static final int	BASE_OF_BINARY_UNIT				=	  2;
+	private static final int	MAX_EXPONENT_IN_BINARY_UNIT		=	  7;
 	
-	private final int		maxPermittedColorValue		=	255;
-	private final int		bitshiftAlpha				= 	 24;
-	private final int		bitshiftRed					= 	 16;
-	private final int		bitshiftGreen				= 	  8;
+	private static final int	MAX_PERMITTED_COLOR_VALUE		=	255;
+	private static final int	BITSHIFT_ALPHA					= 	 24;
+	private static final int	BITSHIFT_RED					= 	 16;
+	private static final int	BITSHIFT_GREEN					= 	  8;
 	
 	
 	
@@ -62,8 +62,8 @@ public class WorkingImage {
 		
 		redundancy 			=	0;
 		
-		extendedStepSize 	= 	initialExtendesStepSize;
-		wmMaxLength 		= 	initialWatermarkMaxLength;
+		extendedStepSize 	= 	INITIAL_EXTENDED_STEPSIZE;
+		wmMaxLength 		= 	INITIAL_WATERMARK_MAX_LENGTH;
 
 		if (image != null){
 			watermark 			=	readWatermark();
@@ -140,11 +140,11 @@ public class WorkingImage {
 		String watermarkTranslationString = "";
 
 		// Die Startmarke wird in Binärdarstellung übersetzt und dem String hinzugefügt.
-		for (int i = 0    ;    i < watermarkIndicator.length()    ;    i++)
-			watermarkTranslationString += characterToBinary(watermarkIndicator.charAt(i));
+		for (int i = 0    ;    i < WATERMARK_INDICATOR.length()    ;    i++)
+			watermarkTranslationString += characterToBinary(WATERMARK_INDICATOR.charAt(i));
 
 		// Die Länge des eingegebenen Textes wird in Binärdarstellung übersetzt und dem String hinzugefügt.
-		watermarkTranslationString += characterToBinary((char)(payload.length() * lengthOfBinaryUnit));
+		watermarkTranslationString += characterToBinary((char)(payload.length() * LENGTH_OF_BINARY_UNIT));
 
 		// Der Text wird in Binärdarstellung übersetzt und dem String hinzugefügt.
 		for (int i = 0    ;    i < payload.length()    ;    i++)
@@ -158,22 +158,22 @@ public class WorkingImage {
 
 		
 		// In einem ersten Durchlauf werden alle ungeraden Blauwerte 'begradigt'.
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += stepSize){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += stepSize){
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
 				// Für jeden Pixel wird die Farbe vom Typ Color ermittelt und der Blauwert isoliert.
-				Color activePixel = new Color(imgColorModel.getRGB(imgRaster.getDataElements(x, y, null)));
+				Color activePixel = new Color(image.getRGB(x, y), true);
 				int blue  =  activePixel.getBlue();
 
 				// Der Blau-Wert wird manipuliert, sofern nötig.
 				if ( blue % 2  ==  1){
-					if (blue < maxPermittedColorValue)
+					if (blue < MAX_PERMITTED_COLOR_VALUE)
 						blue++;
 					else
 						blue--;
 					// Mit dem manipulieten Blau-Wert wird eine neue Farbe erzeugt und dem Pixel zugewiesen.
-					int newColor = ((activePixel.getAlpha()  <<  bitshiftAlpha)  |
-									(activePixel.getRed()    <<  bitshiftRed)  |
-									(activePixel.getGreen()  <<  bitshiftGreen)  |
+					int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  |
+									(activePixel.getRed()    <<  BITSHIFT_RED)  |
+									(activePixel.getGreen()  <<  BITSHIFT_GREEN)  |
 									 blue);
 					imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
 				}
@@ -189,17 +189,18 @@ public class WorkingImage {
 		int currentBinary = 0;
 
 		// Im zweiten Durchgang wird das Wasserzeichen geschrieben.
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += stepSize){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += stepSize){
-				Color activePixel = new Color(imgColorModel.getRGB(imgRaster.getDataElements(x, y, null)));
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
+				Color activePixel = new Color(image.getRGB(x, y), true);
+
 				int blue  =  activePixel.getBlue();
 
 				// Aufgrund der Vorbereitung kann hier eine einfache Addition erfolgen.
 				blue += watermarkBinary[currentBinary];
 
-				int newColor = ((activePixel.getAlpha()  <<  bitshiftAlpha)  | 
-								(activePixel.getRed()    <<  bitshiftRed)  | 
-								(activePixel.getGreen()  <<  bitshiftGreen)  | 
+				int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  | 
+								(activePixel.getRed()    <<  BITSHIFT_RED)  | 
+								(activePixel.getGreen()  <<  BITSHIFT_GREEN)  | 
 								 blue);
 				imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
 
@@ -244,11 +245,10 @@ public class WorkingImage {
 	public String readWatermark(){
 		// Die Startmarkierung wird in Binärdarstellung übersetzt und zwischengespeichert.
 		String binaryIndicator = "";
-		for (int i = 0    ;    i < watermarkIndicator.length()    ;    i++)
-			binaryIndicator += characterToBinary(watermarkIndicator.charAt(i));
+		for (int i = 0    ;    i < WATERMARK_INDICATOR.length()    ;    i++)
+			binaryIndicator += characterToBinary(WATERMARK_INDICATOR.charAt(i));
 		
 		// Relevante Bildwerte werden zwischengespeichert, damit weniger Methodenaufrufe in den Schleifen erfolgen.
-		ColorModel imgColorModel 	=	image.getColorModel();
 		WritableRaster imgRaster	=	image.getRaster();
 		int imgRasterHeight			=	imgRaster.getHeight();
 		int imgRasterWidth			= 	imgRaster.getWidth();
@@ -262,9 +262,9 @@ public class WorkingImage {
 		String readOut = "";
 			
 		// Die Binärdaten werden aus den Blauwerten ausgelesen und im oben angelegten int-Array zwischengespeichert. 
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += stepSize){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += stepSize){
-				Color activePixel =  new Color(imgColorModel.getRGB(imgRaster.getDataElements(x, y, null)));
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
+				Color activePixel = new Color(image.getRGB(x, y), true);
 				binaryReadOut[y][x] = (activePixel.getBlue()%2);
 			}
 		}
@@ -277,8 +277,8 @@ public class WorkingImage {
 		// gespiegelt um eine ggf. erfolgte Spiegelung oder Rotation um 180 Grad des Bildes auszugleichen.
 		if (readOut == ""){
 			int retry[][] = new int[imgRasterHeight][imgRasterWidth];
-			for (int y = 0    ;    y < imgRasterHeight    ;    y += stepSize){
-				for (int x = 0    ;    x < imgRasterWidth    ;    x += stepSize){
+			for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+				for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
 					retry[y][x] = binaryReadOut[y][imgRasterWidth-1-x];
 				}
 			}
@@ -307,19 +307,20 @@ public class WorkingImage {
 		int imgRasterWidth			= 	imgRaster.getWidth();
 
 		
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += stepSize){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += stepSize){
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
 				// Für jedes Pixel wird der Blauwert isoliert.
-				Color activePixel = new Color(imgColorModel.getRGB(imgRaster.getDataElements(x, y, null)));
+				Color activePixel = new Color(image.getRGB(x, y), true);
+
 				int blue  =  activePixel.getBlue();
 				
 				// Ist der Blauwert nicht durch zwei teilbar, wird 1 subtrahiert.
 				if (blue % 2  ==  1){
 					blue--;
 					
-					int newColor = ((activePixel.getAlpha()  <<  bitshiftAlpha)  |  
-									(activePixel.getRed()    <<  bitshiftRed)  |  
-									(activePixel.getGreen()  <<  bitshiftGreen)  | 
+					int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  |  
+									(activePixel.getRed()    <<  BITSHIFT_RED)  |  
+									(activePixel.getGreen()  <<  BITSHIFT_GREEN)  | 
 									 blue);
 					
 					imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
@@ -374,7 +375,7 @@ public class WorkingImage {
 	
 	private int calculateWatermarkMaxLength(){
 		int width = image.getRaster().getWidth();
-		int availableSpace = width / lengthOfBinaryUnit - watermarkIndicator.length() - 1;		
+		int availableSpace = width / LENGTH_OF_BINARY_UNIT - WATERMARK_INDICATOR.length() - 1;		
 		if (availableSpace < wmMaxLength)
 			return availableSpace;
 		return wmMaxLength;		
@@ -395,13 +396,13 @@ public class WorkingImage {
 		
 		int characterDecimalValue = (int)character;
 		
-		for (int i = maxExponentInBinaryUnit    ;    i >= 0    ;    i--){
+		for (int i = MAX_EXPONENT_IN_BINARY_UNIT    ;    i >= 0    ;    i--){
 			temp[i] = (characterDecimalValue % 2 == 0)  ?  ('0')  :  ('1');
-			characterDecimalValue /= baseOfBinaryUnit;
+			characterDecimalValue /= BASE_OF_BINARY_UNIT;
 		}
 		
 		String feedback = "";
-		for (int i = 0    ;    i < lengthOfBinaryUnit    ;    i++){
+		for (int i = 0    ;    i < LENGTH_OF_BINARY_UNIT    ;    i++){
 			feedback += temp[i];
 		}
 		return feedback;
@@ -422,9 +423,9 @@ public class WorkingImage {
 		char[] binaryCharacter = s.toCharArray();
 		
 		int decimalValueOfCharacter = 0;
-		for (int i = 0    ;    i < lengthOfBinaryUnit    ;    i++)
+		for (int i = 0    ;    i < LENGTH_OF_BINARY_UNIT    ;    i++)
 			decimalValueOfCharacter 	+= 	(binaryCharacter[i] - '0') * 
-											 Math.pow(baseOfBinaryUnit, (maxExponentInBinaryUnit-i));
+											 Math.pow(BASE_OF_BINARY_UNIT, (MAX_EXPONENT_IN_BINARY_UNIT-i));
 
 		return (char) decimalValueOfCharacter;
 	}
@@ -447,7 +448,7 @@ public class WorkingImage {
 		String readOutInverted = "";
 		
 		for (int y = 0    ;    y < binaryReadOut.length    ;    y += extendedStepSize){
-			for (int x = 0    ;    x < binaryReadOut[y].length    ;    x += stepSize){
+			for (int x = 0    ;    x < binaryReadOut[y].length    ;    x += STEPSIZE){
 				// Das Bitmuster der ersten Bildzeile wie gelesen. (Keine oder geradzahlige Farbänderungen).
 				readOutRegular     +=    (binaryReadOut[y][x] == 0) ? '0' : '1';
 				// Das Bitmuster der ersten Bildzeile, jedoch invertiert. (Ungeradzahlige Farbänderungen).
@@ -492,9 +493,9 @@ public class WorkingImage {
 		String watermark = "";
 		
 		if ( !(sizeOfPayload == 0)){
-			for (int i = 0    ;    i < sizeOfPayload  &&  i < readOut.length()    ;    i += lengthOfBinaryUnit)
+			for (int i = 0    ;    i < sizeOfPayload  &&  i < readOut.length()    ;    i += LENGTH_OF_BINARY_UNIT)
 				watermark += binaryToCharacter(		readOut.substring(	startOfPayload + i, 
-																		startOfPayload + i + lengthOfBinaryUnit));
+																		startOfPayload + i + LENGTH_OF_BINARY_UNIT));
 		}
 
 		return watermark;
