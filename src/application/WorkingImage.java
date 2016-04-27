@@ -11,7 +11,7 @@ import javax.imageio.ImageIO;
 
 
 /**
- * For each opened image an instance of WorkingImage (containing the actual image) is created.
+ * For each opened image-file an instance of WorkingImage (containing the actual image) is created.
  * 
  * @author Markus Grosshaeuser
  *
@@ -40,8 +40,8 @@ public class WorkingImage {
 
 	private String 			watermark;
 	
-	private boolean 		statusImageSaved;
-	private boolean			statusImageLoaded;
+	private boolean 		imageSaved;
+	private boolean			imageLoaded;
 			
 	private int				redundancy;
 			
@@ -57,8 +57,8 @@ public class WorkingImage {
 
 		watermark			=	"";
 		
-		statusImageSaved	=	false;
-		statusImageLoaded	= 	false;
+		imageSaved			=	false;
+		imageLoaded			= 	false;
 		
 		redundancy 			=	0;
 		
@@ -67,18 +67,16 @@ public class WorkingImage {
 
 		if (image != null){
 			watermark 			=	readWatermark();
-			statusImageSaved 	=	true;
-			statusImageLoaded	= 	true;
+			imageSaved 	=	true;
+			imageLoaded	= 	true;
 		}
 	}
 	
 	
 
-	
-	
-	
-	public boolean 	getStatusImageSaved()		{		return statusImageSaved;	}
-	public boolean 	getStatusImageLoaded()		{		return statusImageLoaded;	}
+		
+	public boolean 	isImageSaved()				{		return imageSaved;	}
+	public boolean 	isImageLoaded()				{		return imageLoaded;	}
 		
 	public String 	getEmbeddedWatermark()		{		return watermark;			}
 	public File 	getImageFile()				{		return imageFile;			}
@@ -89,7 +87,7 @@ public class WorkingImage {
 	public boolean saveImageFile(){
 		try {
 			ImageIO.write(image, "png", imageFile);
-			statusImageSaved = true;
+			imageSaved = true;
 		} catch (IOException e) {
 			return false;
 		}
@@ -101,7 +99,7 @@ public class WorkingImage {
 	public boolean saveImageFileAs(File destination){
 			try {	
 			ImageIO.write(image, "png", destination);
-			statusImageSaved = true;
+			imageSaved = true;
 		} 
 		catch (IOException e) {
 			return false;		
@@ -110,18 +108,14 @@ public class WorkingImage {
 	}
 	
 	
-
 	
-	
-	
-/**
- * Method for writing the watermark to a given image.
- * 
- * @param payload	The text of the watermark to be written.
- * 
- * @return			True or false, depending on success.
- */	
-
+	/**
+	 * Writes a watermark to the image.
+	 * 
+	 * @param payload	The text of the watermark to be written.
+	 * 
+	 * @return			True or false, depending on success.
+	 */	
 	public boolean writeWatermark(String payload) {
 		if (payload == null || payload == "")
 			return false;
@@ -130,125 +124,42 @@ public class WorkingImage {
 			return false;
 			
 
-		// Relevante Bildwerte werden zwischengespeichert, damit weniger Methodenaufrufe in den Schleifen erfolgen.
 		ColorModel imgColorModel 	= 	image.getColorModel();
 		WritableRaster imgRaster 	= 	image.getRaster();
 		int imgRasterHeight 		= 	imgRaster.getHeight();
 		int imgRasterWidth			= 	imgRaster.getWidth();
 		
 		redundancy = 0;
-		String watermarkTranslationString = "";
+		int[] watermarkBinary = createWatermarkBinarySequence(payload);
 
-		// Die Startmarke wird in Binärdarstellung übersetzt und dem String hinzugefügt.
-		for (int i = 0    ;    i < WATERMARK_INDICATOR.length()    ;    i++)
-			watermarkTranslationString += characterToBinary(WATERMARK_INDICATOR.charAt(i));
-
-		// Die Länge des eingegebenen Textes wird in Binärdarstellung übersetzt und dem String hinzugefügt.
-		watermarkTranslationString += characterToBinary((char)(payload.length() * LENGTH_OF_BINARY_UNIT));
-
-		// Der Text wird in Binärdarstellung übersetzt und dem String hinzugefügt.
-		for (int i = 0    ;    i < payload.length()    ;    i++)
-			watermarkTranslationString += characterToBinary(payload.charAt(i));
-
-		
-		// Der Binärstring wird in ein int-Array umgewandelt.
-		int watermarkBinary[] = new int[watermarkTranslationString.length()];
-		for (int i = 0    ;    i < watermarkTranslationString.length()    ;    i++)
-			watermarkBinary[i] = watermarkTranslationString.charAt(i)-'0';
-
-		
-		// In einem ersten Durchlauf werden alle ungeraden Blauwerte 'begradigt'.
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
-				// Für jeden Pixel wird die Farbe vom Typ Color ermittelt und der Blauwert isoliert.
-				Color activePixel = new Color(image.getRGB(x, y), true);
-				int blue  =  activePixel.getBlue();
-
-				// Der Blau-Wert wird manipuliert, sofern nötig.
-				if ( blue % 2  ==  1){
-					if (blue < MAX_PERMITTED_COLOR_VALUE)
-						blue++;
-					else
-						blue--;
-					// Mit dem manipulieten Blau-Wert wird eine neue Farbe erzeugt und dem Pixel zugewiesen.
-					int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  |
-									(activePixel.getRed()    <<  BITSHIFT_RED)  |
-									(activePixel.getGreen()  <<  BITSHIFT_GREEN)  |
-									 blue);
-					imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
-				}
-			}
-		}
-		// Die Änderungen werden in das Bild geschrieben.
-		image.setData(imgRaster);
-
-		
-		// Im zweiten Durchgang werden die Informationen in die Blau-Werte der Pixel geschrieben.
-		
-		// Zähler für die aktuell zu schreibende Binärziffer.
-		int currentBinary = 0;
-
-		// Im zweiten Durchgang wird das Wasserzeichen geschrieben.
-		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
-			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
-				Color activePixel = new Color(image.getRGB(x, y), true);
-
-				int blue  =  activePixel.getBlue();
-
-				// Aufgrund der Vorbereitung kann hier eine einfache Addition erfolgen.
-				blue += watermarkBinary[currentBinary];
-
-				int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  | 
-								(activePixel.getRed()    <<  BITSHIFT_RED)  | 
-								(activePixel.getGreen()  <<  BITSHIFT_GREEN)  | 
-								 blue);
-				imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
-
-				// Der Zähler wird nach einem erfolgreichen Schreibzyklus wieder auf null gestellt (Redundanz).
-				if (currentBinary  <  watermarkBinary.length -1)
-					currentBinary++;
-				else{
-					currentBinary = 0;
-					// Jeder Abgeschlossene Schreibzyklus wird gezählt.
-					redundancy++;
-				}
-
-			}
-		}
-		// Die Änderungen werden in das Bild geschrieben.
-		image.setData(imgRaster);
+		resetBlueByAddition(imgColorModel, imgRaster, imgRasterHeight, imgRasterWidth);
+				
+		writeDataToBlueChannel(imgColorModel, imgRaster, imgRasterHeight, imgRasterWidth, watermarkBinary);
 	
 		// Zur Überprüfung wird das Wasserzeichen ausgelsen.
 		watermark = readWatermark();
 
 		if (!watermark.equals("")){
-			statusImageSaved = false;
+			imageSaved = false;
 			return true;
 		} else {
 			return false;
 		}
 	}
-	
-	
-	
 
-	
-	
-/**
- * Method for reading the watermark. The binary information from an image are extracted and decrypted using the
- * private decryptBinary() method. If the the first attempt returns an empty string, the informations are vertically
- * mirrored and decryptBinary() is called a second time.
- * 
- * @return		The watermark as String.
- */	
-	
+
+
+	/**
+	 * Reads the watermark. The binary information from an image are extracted and decrypted using private methods. 
+	 * 
+	 * @return		The watermark as String.
+	 */	
 	public String readWatermark(){
 		// Die Startmarkierung wird in Binärdarstellung übersetzt und zwischengespeichert.
 		String binaryIndicator = "";
 		for (int i = 0    ;    i < WATERMARK_INDICATOR.length()    ;    i++)
 			binaryIndicator += characterToBinary(WATERMARK_INDICATOR.charAt(i));
 		
-		// Relevante Bildwerte werden zwischengespeichert, damit weniger Methodenaufrufe in den Schleifen erfolgen.
 		WritableRaster imgRaster	=	image.getRaster();
 		int imgRasterHeight			=	imgRaster.getHeight();
 		int imgRasterWidth			= 	imgRaster.getWidth();
@@ -256,12 +167,8 @@ public class WorkingImage {
 		// Um Rechenzeit zu sparen ist die Zahl der zu untersuchenden Bildzeilen abhängig von der Bildgröße.
 		extendedStepSize = (imgRasterHeight/100) + 1;
 
-		// int-Array um die Binärdaten des gesamtes Bildes zu speichern.
 		int[][] binaryReadOut = new int[imgRasterHeight][imgRasterWidth];
-	
-		String readOut = "";
 			
-		// Die Binärdaten werden aus den Blauwerten ausgelesen und im oben angelegten int-Array zwischengespeichert. 
 		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
 			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
 				Color activePixel = new Color(image.getRGB(x, y), true);
@@ -269,36 +176,16 @@ public class WorkingImage {
 			}
 		}
 
-		// Die Methode decryptBinary() wird gerufen um die Binärdaten auf ein Wasserzeichen hin zu untersuchen.
-		readOut = searchAndDecryptWatermark(binaryIndicator, binaryReadOut);
-		
-		
-		// Wenn beim ersten Aufruf von decryptBinary() kein Wasserzeichen gefunden wird, wird das Array vertikal
-		// gespiegelt um eine ggf. erfolgte Spiegelung oder Rotation um 180 Grad des Bildes auszugleichen.
-		if (readOut == ""){
-			int retry[][] = new int[imgRasterHeight][imgRasterWidth];
-			for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
-				for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
-					retry[y][x] = binaryReadOut[y][imgRasterWidth-1-x];
-				}
-			}
-			// decryptBinary() wird mit dem neu angelegten (gespiegelten) Array erneut aufgerufen.
-			readOut = searchAndDecryptWatermark(binaryIndicator, retry);
-		}
-		
-		// Die Zeichenkette (Wasserzeichen oder ein leerere String" wird zurückgegeben.
-		return readOut;
+		return searchWatermark(binaryIndicator, binaryReadOut);
 	}
 	
 	
 	
-	
-	
-/**
- * Method for removing the watermark by resetting all bits to zero (an even blue value).
- * 
- * @return		True or false depending on success.
- */	
+	/**
+	 * Erases the watermark by calling a private method for resetting all bits to zero (an even blue value).
+	 * 
+	 * @return		True or false depending on success.
+	 */	
 	public boolean removeWatermark(){
 		// Relevante Bildwerte werden zwischengespeichert, damit weniger Methodenaufrufe in den Schleifen erfolgen.
 		ColorModel imgColorModel 	=	image.getColorModel();
@@ -307,14 +194,74 @@ public class WorkingImage {
 		int imgRasterWidth			= 	imgRaster.getWidth();
 
 		
+		resetBlueBySubstraction(imgColorModel, imgRaster, imgRasterHeight, imgRasterWidth);
+		
+	
+		// Zur Überprüfung wird versucht ein Wasserzeichen auszulesen.
+		watermark = readWatermark();
+		
+		if (watermark.equals("")){
+			redundancy = 0;
+			imageSaved = false;
+			return true;
+		}
+
+		return false;
+	}
+
+
+
+	/**
+	 * Sets the blue values of all pixels to a value v with v%2==0, by adding 1 where necessary.
+	 * 
+	 * @param imgColorModel		The ColorModel of the image.
+	 * @param imgRaster			The Raster of the image.
+	 * @param imgRasterHeight	The width of the image.
+	 * @param imgRasterWidth	The height of the image.
+	 */
+	private void resetBlueByAddition(ColorModel imgColorModel, WritableRaster imgRaster, int imgRasterHeight,
+			int imgRasterWidth) {
+		
 		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
 			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
-				// Für jedes Pixel wird der Blauwert isoliert.
+				Color activePixel = new Color(image.getRGB(x, y), true);
+				int blue  =  activePixel.getBlue();
+	
+				if ( blue % 2  ==  1){
+					if (blue < MAX_PERMITTED_COLOR_VALUE)
+						blue++;
+					else
+						blue--;
+					int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  |
+									(activePixel.getRed()    <<  BITSHIFT_RED)  |
+									(activePixel.getGreen()  <<  BITSHIFT_GREEN)  |
+									 blue);
+					imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
+				}
+			}
+		}
+		image.setData(imgRaster);
+	}
+
+
+
+	/**
+	 * Sets the blue values of all pixels to a value v with v%2==0, by subtracting 1 where necessary.
+	 * 
+	 * @param imgColorModel		The ColorModel of the image.
+	 * @param imgRaster			The Raster of the image.
+	 * @param imgRasterHeight	The width of the image.
+	 * @param imgRasterWidth	The height of the image.
+	 */
+	private void resetBlueBySubstraction(ColorModel imgColorModel, WritableRaster imgRaster, int imgRasterHeight,
+			int imgRasterWidth) {
+		
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
 				Color activePixel = new Color(image.getRGB(x, y), true);
 
 				int blue  =  activePixel.getBlue();
 				
-				// Ist der Blauwert nicht durch zwei teilbar, wird 1 subtrahiert.
 				if (blue % 2  ==  1){
 					blue--;
 					
@@ -327,52 +274,108 @@ public class WorkingImage {
 				}
 			}
 		}
-		
-		// Die Änderungen werden in das Bild geschrieben.
 		image.setData(imgRaster);
-
-		// Zur Überprüfung wird versucht ein Wasserzeichen auszulesen.
-		watermark = readWatermark();
-		
-		if (watermark.equals("")){
-			redundancy = 0;
-			statusImageSaved = false;
-			return true;
-		}
-
-		return false;
 	}
 	
 	
 	
+	/**
+	 * Writes the given data to an image. Data has to be in binary form as an int-array.
+	 * 
+	 * @param imgColorModel		The ColorModel of the image.
+	 * @param imgRaster			The Raster of the image.
+	 * @param imgRasterHeight	The width of the image.
+	 * @param imgRasterWidth	The height of the image.
+	 * @param watermarkBinary	The int-Array holding the binary data.
+	 */
+	private void writeDataToBlueChannel(ColorModel imgColorModel, WritableRaster imgRaster, int imgRasterHeight,
+			int imgRasterWidth, int[] watermarkBinary) {
+		
+		int currentBinary = 0;
 	
-/**
- * Loading the image from a given file.
- * 	
- * @return	The loaded image.
- */
+		for (int y = 0    ;    y < imgRasterHeight    ;    y += STEPSIZE){
+			for (int x = 0    ;    x < imgRasterWidth    ;    x += STEPSIZE){
+				Color activePixel = new Color(image.getRGB(x, y), true);
 	
+				int blue  =  activePixel.getBlue();
+	
+				// Aufgrund der Vorbereitung kann hier eine einfache Addition erfolgen.
+				blue += watermarkBinary[currentBinary];
+	
+				int newColor = ((activePixel.getAlpha()  <<  BITSHIFT_ALPHA)  | 
+								(activePixel.getRed()    <<  BITSHIFT_RED)  | 
+								(activePixel.getGreen()  <<  BITSHIFT_GREEN)  | 
+								 blue);
+				imgRaster.setDataElements(x, y, imgColorModel.getDataElements(newColor, null));
+	
+				if (currentBinary  <  watermarkBinary.length -1)
+					currentBinary++;
+				else{
+					currentBinary = 0;
+					redundancy++;
+				}
+	
+			}
+		}
+		image.setData(imgRaster);
+	}
+
+
+
+	/**
+	 * Packs a watermark-text into a binary sequence containing:
+	 * (1) the start-indicator
+	 * (2) the length of the payload and
+	 * (3) the payload itself
+	 * 
+	 * @param payload	The watermark text.
+	 * 
+	 * @return			int[] holding the binary representation of the complete watermark.
+	 */
+	private int[] createWatermarkBinarySequence(String payload) {
+		String watermarkTranslationString = "";
+	
+		for (int i = 0    ;    i < WATERMARK_INDICATOR.length()    ;    i++)
+			watermarkTranslationString += characterToBinary(WATERMARK_INDICATOR.charAt(i));
+	
+		watermarkTranslationString += characterToBinary((char)(payload.length() * LENGTH_OF_BINARY_UNIT));
+	
+		for (int i = 0    ;    i < payload.length()    ;    i++)
+			watermarkTranslationString += characterToBinary(payload.charAt(i));
+	
+		int watermarkBinary[] = new int[watermarkTranslationString.length()];
+		for (int i = 0    ;    i < watermarkTranslationString.length()    ;    i++)
+			watermarkBinary[i] = watermarkTranslationString.charAt(i)-'0';
+		return watermarkBinary;
+	}
+
+
+
+	/**
+	 * Loads the image from a given file.
+	 * 	
+	 * @return	The loaded image.
+	 */
 	private BufferedImage loadImage(){
 		BufferedImage img;
 		
 		try {
 			img = ImageIO.read(imageFile);
-			statusImageLoaded = true;
+			imageLoaded = true;
 			return img;
 		} catch (IOException e) {
-			statusImageLoaded = false;
+			imageLoaded = false;
 			return null;
 		}
 	}
 	
 	
-/**
- * Returns the maximum number of characters available for the watermark.	
- * 
- * @return	Maximum number of characters.
- */
 	
-	
+	/**
+	 * Returns the maximum number of characters available for the watermark.	
+	 * 
+	 * @return	Maximum number of characters.
+	 */
 	private int calculateWatermarkMaxLength(){
 		int width = image.getRaster().getWidth();
 		int availableSpace = width / LENGTH_OF_BINARY_UNIT - WATERMARK_INDICATOR.length() - 1;		
@@ -383,14 +386,13 @@ public class WorkingImage {
 	
 	
 	
-
-/**
- * Helper method for converting a character into binary representation.
- * 
- * @param character		A single character (or integer digit) for conversion into binary notation.
- * 
- * @return				A String representing the binary notation of a character with as one byte.
- */
+	/**
+	 * Converts a character into binary representation.
+	 * 
+	 * @param character		A single character (or integer digit) for conversion into binary notation.
+	 * 
+	 * @return				A String representing the binary notation of a character with as one byte.
+	 */
 	private String characterToBinary(char character){
 		char[] temp = {'0','0','0','0','0','0','0','0'};
 		
@@ -410,15 +412,13 @@ public class WorkingImage {
 	
 	
 	
-	
-	
-/**
- * Helper method for converting a binary sequence to the corresponding character.
- * 
- * @param s		A string with size 8 representing one byte read from the watermark.
- * 
- * @return		The character that is represented by the given binary sequence.
- */
+	/**
+	 * Converts a binary sequence to the corresponding character.
+	 * 
+	 * @param s		A string with size 8 representing one byte read from the watermark.
+	 * 
+	 * @return		The character that is represented by the given binary sequence.
+	 */
 	private char binaryToCharacter(String s){
 		char[] binaryCharacter = s.toCharArray();
 		
@@ -430,66 +430,75 @@ public class WorkingImage {
 		return (char) decimalValueOfCharacter;
 	}
 
-	
-	
 
 	
-/**
- * Method for the decryption of binary informations to a character string. 
- * 
- * @param binaryIndicator	The binary representation of the watermak start phrase.
- * @param binaryReadOut		The two-dimensional int-array holding the binary data from an image.
- * 
- * @return		The watermark read from the image after converting from binary to characters
- */
-	private String searchAndDecryptWatermark(String binaryIndicator, int[][] binaryReadOut){
-		String readOut = "";
-		String readOutRegular = "";
-		String readOutInverted = "";
+	/**
+	 * Searchs for binary informations representing a watermark. 
+	 * Reading is done using original and inverted bit-pattern and is stopped as soon as a 
+	 * watermark-indicator is found.
+	 * 
+	 * @param binaryIndicator	The binary representation of the watermak start phrase.
+	 * @param binaryReadOut		The two-dimensional int-array holding the binary data from an image.
+	 * 
+	 * @return		The watermark text read from the image after converting from binary to characters
+	 */
+	private String searchWatermark(String binaryIndicator, int[][] binaryReadOut){
+		String readOutRegularForward = "";
+		String readOutRegularBackward = "";
+		String readOutInvertedForward = "";
+		String readOutInvertedBackward = "";
 		
 		for (int y = 0    ;    y < binaryReadOut.length    ;    y += extendedStepSize){
 			for (int x = 0    ;    x < binaryReadOut[y].length    ;    x += STEPSIZE){
-				// Das Bitmuster der ersten Bildzeile wie gelesen. (Keine oder geradzahlige Farbänderungen).
-				readOutRegular     +=    (binaryReadOut[y][x] == 0) ? '0' : '1';
-				// Das Bitmuster der ersten Bildzeile, jedoch invertiert. (Ungeradzahlige Farbänderungen).
-				readOutInverted    +=    (binaryReadOut[y][x] == 0) ? '1' : '0';
+				readOutRegularForward  	+= 	(binaryReadOut[y][x] == 0) ? '0' : '1';
+				readOutInvertedForward 	+= 	(binaryReadOut[y][x] == 0) ? '1' : '0';
+				readOutRegularBackward 	+= 	(binaryReadOut[y][binaryReadOut[y].length-1-x] == 0) ? '0' : '1';
+				readOutInvertedBackward += 	(binaryReadOut[y][binaryReadOut[y].length-1-x] == 0) ? '1' : '0';
 			}
 
-			// Wird in Bildzeile y eine Startmarke gefunden, wird der Rest des Bildes nicht überprüft.
-			if (readOutRegular.contains(binaryIndicator)){
-				readOut = readOutRegular;
-				break;
-			} else if (readOutInverted.contains(binaryIndicator)){
-				readOut = readOutInverted;
-				break;
-			} else {
-				readOutRegular  = "";
-				readOutInverted = "";
-			}
+			if (readOutRegularForward.contains(binaryIndicator))
+				return decryptWatermark(binaryIndicator, readOutRegularForward);
+			else if (readOutRegularBackward.contains(binaryIndicator))
+				return decryptWatermark(binaryIndicator, readOutRegularBackward);
+			else if (readOutInvertedForward.contains(binaryIndicator))
+				return decryptWatermark(binaryIndicator, readOutInvertedForward);
+			else if (readOutInvertedBackward.contains(binaryIndicator))
+				return decryptWatermark(binaryIndicator, readOutInvertedBackward);
+			
+			readOutRegularForward 	= "";
+			readOutRegularBackward	= "";
+			readOutInvertedForward 	= "";
+			readOutInvertedBackward	= "";
 		}		
+		return decryptWatermark(binaryIndicator, "");
+	}
 
-		
-		// Ist das Ergebnis nicht leer, wird der Startindex des Textes ermittelt und seine Länge ausgelesen.
+	
 
+	/**
+	 * Decrypts the binary information representing a watermark.
+	 * First the start-indicator is located, then the length of the payload is read.
+	 * The payload is translated from binary to character one character at a time.
+	 * 
+	 * @param binaryIndicator	The binary representation of the startmark.
+	 * @param readOut			A String holding the binary data of one image row.
+	 * 
+	 * @return					The character representation of the binary watermark text.
+	 */
+	private String decryptWatermark(String binaryIndicator, String readOut) {
 		int startOfPayload = 0;
 		int sizeOfPayload  = 0;
-
+	
 		for (int i = 0    ;    i < readOut.length() - binaryIndicator.length() - 2    ;    i++){
-			// Zunächst wird die Startmarkierung gesucht.
 			if (readOut.substring(i, (i+binaryIndicator.length())).equals(binaryIndicator)){
-				// Auf die Startmarkierung folgt die Länge des Textes.
 				sizeOfPayload = (int) binaryToCharacter(	readOut.substring(	i+binaryIndicator.length(), 
 																				i+binaryIndicator.length()+8));
-				
-				// Nach der Längenangabe folgt der Text.
 				startOfPayload = i + binaryIndicator.length() + 8;
 				break;
 			}
 		}
 		
-		
-		// Ist das Ergebnis nicht leer, werden die Binärdaten mittels der binaryToCharacter()-Methode übersetzt.
-		
+				
 		String watermark = "";
 		
 		if ( !(sizeOfPayload == 0)){
@@ -497,7 +506,7 @@ public class WorkingImage {
 				watermark += binaryToCharacter(		readOut.substring(	startOfPayload + i, 
 																		startOfPayload + i + LENGTH_OF_BINARY_UNIT));
 		}
-
+	
 		return watermark;
 	}
 
