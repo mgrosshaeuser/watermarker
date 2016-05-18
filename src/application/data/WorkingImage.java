@@ -82,11 +82,12 @@ public class WorkingImage {
 	public void writeWatermark(String watermark) {
 		BufferedImage tempImage = null;
 		if (! (watermark == null)   &&   ! watermark.equals("")   &&   ! (watermark.length() > watermarkMaxLength)){
-			tempImage = ReadWriteUtilities.writeWatermarkToImage(this, watermark, image);
+			tempImage = ReadWriteUtilities.writeWatermarkToImage(watermark, image);
 		}
 		
 		if (tempImage != null) {
 			image = tempImage;
+			redundantWrites = ReadWriteUtilities.getRedundancy();
 			imageSaved = false;
 			imageWatermarked = true;
 			imageStatus = "Wasserzeichen geschrieben mit " + redundantWrites + "-facher Redundanz.";
