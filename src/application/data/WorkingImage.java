@@ -59,7 +59,7 @@ public class WorkingImage {
 			file = this.file;
 		}
 
-		file = getFileWitchAppropriateFileExtension(file);
+		file = getFileWithAppropriateFileExtension(file);
 
 		try {
 			saveImageDataInFile(file);
@@ -127,7 +127,7 @@ public class WorkingImage {
 	}
 
 
-	private File getFileWitchAppropriateFileExtension(File file) {
+	private File getFileWithAppropriateFileExtension(File file) {
 		String fileName = file.getAbsolutePath().toLowerCase();
 		if (! fileName.endsWith(".png")    &&    ! fileName.endsWith(".bmp")){
 			file = new File(file.getAbsolutePath().toString() + ".png");

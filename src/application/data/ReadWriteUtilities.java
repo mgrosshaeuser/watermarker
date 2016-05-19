@@ -209,12 +209,12 @@ public class ReadWriteUtilities {
 	 * @return			A String containing the watermark (if present) or an empty String.
 	 */
 	private static String searchInBinaryData(int[][] binaryRawData) {
-		String readOutRegularForward = "";
-		String readOutRegularBackward = "";
-		String readOutInvertedForward = "";
-		String readOutInvertedBackward = "";
-		
 		for (int y = 0    ;    y < binaryRawData.length    ;    y += extendedStepSize){
+			String readOutRegularForward = "";
+			String readOutRegularBackward = "";
+			String readOutInvertedForward = "";
+			String readOutInvertedBackward = "";
+			
 			for (int x = 0    ;    x < binaryRawData[y].length    ;    x += STEPSIZE){
 				readOutRegularForward  	+= 	(binaryRawData[y][x] == 0) ? '0' : '1';
 				readOutInvertedForward 	+= 	(binaryRawData[y][x] == 0) ? '1' : '0';
@@ -230,11 +230,6 @@ public class ReadWriteUtilities {
 				return readOutInvertedForward;
 			else if (readOutInvertedBackward.contains(binaryIndicator))
 				return readOutInvertedBackward;
-			
-			readOutRegularForward 	= "";
-			readOutRegularBackward	= "";
-			readOutInvertedForward 	= "";
-			readOutInvertedBackward	= "";
 		}		
 		return "";
 	}

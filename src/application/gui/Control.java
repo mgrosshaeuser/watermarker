@@ -205,7 +205,7 @@ public class Control {
 	
 	private static FileChooser getFileChooserDialog() {
 		FileChooser imageFileChooser = new FileChooser();
-		imageFileChooser.getExtensionFilters().add(new ExtensionFilter("PNG_Files", "*.png", "*.PNG"));
+		imageFileChooser.getExtensionFilters().add(new ExtensionFilter("PNG-Files", "*.png", "*.PNG"));
 		imageFileChooser.getExtensionFilters().add(new ExtensionFilter("BMP-Files", "*.bmp", "*.BMP"));
 		return imageFileChooser;
 	}
