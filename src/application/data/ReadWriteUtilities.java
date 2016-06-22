@@ -81,6 +81,17 @@ public class ReadWriteUtilities {
 			binaryIndicator = translateToBinaryString(WATERMARK_INDICATOR);
 			int[][] binaryRawData = readBinaryData();
 			String binaryReadout = searchInBinaryData(binaryRawData);
+			
+			if (binaryReadout.equals("")){
+				int[][] binarySecondaryData = new int[imageWidth][imageHeight];
+				for (int y = 0    ;    y < binaryRawData.length    ;    y++){
+					for (int x = 0    ;    x < binaryRawData[y].length    ;    x++){
+						binarySecondaryData[x][y] = binaryRawData[y][x];
+					}
+				}
+				binaryReadout = searchInBinaryData(binarySecondaryData);
+			}
+			
 			String binaryWatermark = isolateWatermark(binaryReadout);
 			String watermark = translateToReadableString(binaryWatermark);
 			return watermark;
@@ -236,6 +247,7 @@ public class ReadWriteUtilities {
 			readOutInvertedForward 	= "";
 			readOutInvertedBackward	= "";
 		}		
+		
 		return "";
 	}
 	
